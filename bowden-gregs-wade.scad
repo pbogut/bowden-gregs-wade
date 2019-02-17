@@ -179,6 +179,7 @@ filament_pinch=[
 	motor_mount_translation[0]-gear_separation-filament_feed_hole_offset-filament_diameter/2,
 	motor_mount_translation[1],
 	wade_block_depth/2];
+	block_shift=11.8;
 idler_axis=filament_pinch-[608_diameter/2,0,0];
 idler_fulcrum_offset=608_diameter/2+3.5+m3_diameter/2;
 idler_fulcrum=idler_axis-[0+less_idler_bolt_dist,idler_fulcrum_offset,0];
@@ -214,7 +215,22 @@ module wade (){
 	difference (){
 		union(){
 			// The wade block.
-			cube([wade_block_width,wade_block_height,wade_block_depth]);
+			translate([0,block_shift,0]) {
+				/* cube([wade_block_width,wade_block_height-block_shift,wade_block_depth]); */
+				difference() {
+					cube([wade_block_width,wade_block_height-block_shift,wade_block_depth]);
+					// Some chamfer just for ascetic and maybe plastic save, not necessary
+						translate([30, 0, -1])
+								cylinder(wade_block_depth+2, r=16, $fn=60);
+						rotate(25, [1,0,0])
+							translate([-1, -2, -5])
+								cube([wade_block_width,5,15]);
+						translate([0,0,28])
+							rotate(25, [-1,0,0])
+								translate([-1, -2, -10])
+									cube([wade_block_width,5,15]);
+				}
+			}
 
 			// Filler between wade block and motor mount.
 			translate([10,motor_mount_translation[1]-hole_for_608/2,0])
@@ -224,7 +240,6 @@ module wade (){
 
 			// Connect block to top of motor mount.
 			linear_extrude(height=motor_mount_thickness)
-			//@todo remove this something
 			barbell(block_top_right-[0,5],motor_hole(0),5,nema17_support_d/2,100,60);
 
 			//Connect motor mount to base.
@@ -232,17 +247,6 @@ module wade (){
 			barbell([base_length-base_leadout,
 				20,],motor_hole(2),base_thickness/2,
 				nema17_support_d/2,100,60);
-
-			//Provide the bevel betweeen the base and the wade block.
-			//@todo change this base
-			render()
-			difference(){
-				translate([-block_bevel_r,0,0])
-				cube([block_bevel_r+wade_block_width,
-					base_thickness+block_bevel_r,wade_block_depth]);
-				translate([-block_bevel_r,block_bevel_r+base_thickness])
-				cylinder(r=block_bevel_r,h=wade_block_depth,$fn=60);
-			}
 
 			// The idler hinge.
 			translate(idler_fulcrum){
@@ -277,26 +281,25 @@ module wade (){
 				rotate(-15)
 				translate([-(idler_hinge_r+3)+1,-idler_hinge_r-2,
 					-idler_short_side/2+idler_hinge_width+0.25])
-				cube([idler_hinge_r+3+15,
+				cube([idler_hinge_r+3+9,
 					idler_hinge_r*2+4,
 					layer_thickness]);
 			}
 
-			//The base.
-			//translate([-base_leadout,0,0])
-			//cube([base_length,base_thickness,wade_block_depth]);
+
 
 			motor_mount ();
 		}
 
+
 		block_holes();
-		motor_mount_holes ();
+		motor_mount_holes();
 
 		translate([motor_mount_translation[0]-gear_separation-filament_feed_hole_offset,
-			0,wade_block_depth/2])
-		rotate([-90,0,0]){
-			pc4_m10_holes();
-		}
+			block_shift,wade_block_depth/2])
+			rotate([-90,0,0]){
+				pc4_m10_hole();
+			}
 	}
 }
 
@@ -387,8 +390,7 @@ module block_holes(){
 			translate([-13,0,9.5])
 			b608(h=wade_block_depth);
 
-			/* translate([0,0,8+layer_thickness]) */
-			translate([0,0,8-layer_thickness])
+			translate([0,0,8+layer_thickness])
 			cylinder(r=new_clearance_hole/2,h=wade_block_depth-(8+layer_thickness)+2);
 
 			translate([0,0,20-2])
@@ -399,7 +401,6 @@ module block_holes(){
 			rotate([90,0,0])
 			rotate(360/16)
 			// cylinder(r=filament_feed_hole_d/2,h=wade_block_depth*3,center=true,$fn=8);
-			//@todo put teflon in it
 			cylinder(r=2,h=wade_block_depth*3,center=true,$fn=32);
 		}
 	}
@@ -519,8 +520,15 @@ module wadeidler(){
 		translate(idler_axis+[2+guide_height,+idler_long_side-idler_long_bottom-guide_length/2,0]){
 			/* cube([7,guide_length+2,3.5],center=true); */
 			translate([-7/2,0,0])
-			rotate([90,0,0])
-			cylinder(h=guide_length+4,r=3.5/2,center=true,$fn=16);
+			rotate([90,0,0]) {
+				cylinder(h=guide_length+4,r=3/2,center=true,$fn=16);
+				translate([0,0,-4])
+				// hole for bowden tube, that can be used as a guide
+				cylinder(r=4/2,h=5,center=true,$fn=32);
+				// big enough for easy filament replacement but small enough to keep bowden tube in place
+				translate([5,0,0])
+					cube([10,2.4,guide_length+4], center=true);
+			}
 		}
 
 
@@ -539,7 +547,6 @@ module wadeidler(){
 				idler_short_side-2*idler_hinge_width],center=true);
 
 		}
-
 
 		//Bearing cutout. Kugelleager Aufhaengung
 		translate(idler_axis){
@@ -562,9 +569,6 @@ module wadeidler(){
 
 		//Nut trap for fulcrum screw. Loch fuer Mutter
 		translate(idler_fulcrum+[0,0,idler_short_side/2-idler_hinge_width-1+1.5])
-//		rotate(360/16)
-//		cylinder(h=3,r=m3_nut_diameter/2,$fn=6);
-//		rotate([0,0,30])
 		nut_trap(m3_wrench,3);
 
 		for(idler_screw_hole=[-1,1])
@@ -639,10 +643,7 @@ function rotated(a)=[cos(a),sin(a),0];
 // Modules for defining holes for hotend mounts:
 // These assume the extruder is verical with the bottom filament exit hole at [0,0,0].
 
-module pc4_m10_holes (){
-	extruder_recess_d=16;
-	extruder_recess_h=5.5;
-
+module pc4_m10_hole(){
 	// Recess in base
 	translate([0,0,-1])
 	union() {
