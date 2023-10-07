@@ -9,9 +9,21 @@ use <parametric_involute_gear_v5.0.scad>
 
 //WadesL(); //this module call will make the large gear
 //WadesS();  //this module call will make the small gear
-WadeL_double_helix();
+//WadeL_double_helix();
 //WadesS_double_helix();
-
+ShowAll();
+module ShowAll() {
+	WadesL();
+	rotate(180, [1,0,0])
+	translate([38,0,-8])
+		WadesS();
+	translate([0,80,0]) {
+		WadeL_double_helix();
+		rotate(180, [1,0,0])
+		translate([42,0,0])
+			WadesS_double_helix();
+	}
+}
 
 module WadeL_double_helix(){
 	//Large WADE's Gear - Double Helix
@@ -66,7 +78,7 @@ module WadesL(){
 			rim_width = 3,
 			hub_thickness = 13,
 			hub_diameter = 25,
-			bore_diameter = 8,
+			bore_diameter = 5,
 			circles=0,
 			twist = 0);
 		translate([0,0,6])rotate([180,0,0])m5_hole_vert_with_hex(100);
